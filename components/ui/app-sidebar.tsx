@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { Calendar, Clock, Database, Dices, FileText, Home, Palette, Trash, Code, Book, Image, QrCode, Ruler, DiffIcon, KeySquare, FileCode, CaseSensitive, Binary, Brackets, Search, Timer, Coffee } from "lucide-react"
+import { Calendar, Clock, Database, Dices, FileText, Home, Palette, Trash, Code, Book, Image, QrCode, Ruler, DiffIcon, KeySquare, FileCode, CaseSensitive, Binary, Brackets, Search, Timer, Coffee, Globe } from "lucide-react"
 
 import {
   Sidebar,
@@ -21,6 +21,11 @@ const items = [
     title: "Home",
     url: "/",
     icon: Home,
+  },
+  {
+    title: "API Tester",
+    url: "/tools/api-tester",
+    icon: Globe,
   },
   {
     title: "Pomodoro Timer",

@@ -23,7 +23,8 @@ import {
   Search,
   Book,
   Timer,
-  Coffee
+  Coffee,
+  Globe
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -31,6 +32,12 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const tools = [
+    {
+      title: "API Tester",
+      description: "Test API endpoints with different methods, headers, and request bodies",
+      icon: Globe,
+      url: "/tools/api-tester",
+    },
     {
       title: "Pomodoro Timer",
       description: "Boost productivity with timed work sessions and strategic breaks",
