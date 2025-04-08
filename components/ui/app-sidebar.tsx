@@ -1,6 +1,8 @@
 "use client"
 import { useState } from "react"
 import { Calendar, Clock, Database, Dices, FileText, Home, Palette, Trash, Code, Book, Image, QrCode, Ruler, DiffIcon, KeySquare, FileCode, CaseSensitive, Binary, Brackets, Search, Timer, Coffee, Globe } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import {
   Sidebar,
@@ -131,6 +133,7 @@ const items = [
 
 export function AppSidebar() {
   const [searchQuery, setSearchQuery] = useState('')
+  const pathname = usePathname()
   
   // Filter items based on search query
   const filteredItems = items.filter(item => 
@@ -155,16 +158,25 @@ export function AppSidebar() {
           <SidebarGroupLabel>Toolkit</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {filteredItems.map((item) => {
+                const isActive = pathname === item.url
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <Link 
+                        href={item.url}
+                        className={isActive ? "bg-accent text-accent-foreground" : ""}
+                      >
+                        <item.icon className={isActive ? "text-primary" : ""} />
+                        <span>{item.title}</span>
+                        {isActive && (
+                          <span className="ml-auto h-2 w-2 rounded-full bg-primary" />
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
               {filteredItems.length === 0 && (
                 <div className="px-3 py-2 text-sm text-muted-foreground">
                   No tools found

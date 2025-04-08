@@ -410,9 +410,8 @@ export default function MarkdownNotesPage() {
   const activeNoteTags = notesState.tags.filter(tag => 
     activeNote.tags.includes(tag.id)
   )
-
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)]">
+    <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold tracking-tight">Markdown Notes</h1>
         <div className="flex items-center gap-2">
