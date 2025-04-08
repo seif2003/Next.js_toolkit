@@ -131,7 +131,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👨‍💻 Author
 
-Created and maintained by [Seif Ben Amara](https://www.benamara.tn) - Visit my portfolio to see more of my work.
+Created and maintained by [Seif Ddine Ben Amara](https://www.benamara.tn) - Visit my portfolio to see more of my work.
 
 ## 🙏 Acknowledgements
 
