@@ -4,6 +4,7 @@ import "./globals.css";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import { ThemeProvider, ThemeToggle } from "@/components/ui/theme-provider";
+import { Footer } from "@/components/ui/footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,12 +41,12 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background flex flex-col min-h-screen`}
       >
         <ThemeProvider>
           <SidebarProvider>
             <AppSidebar />
-            <SidebarInset className="p-4 md:p-6">
+            <SidebarInset className="p-4 md:p-6 flex flex-col flex-grow">
               <header className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <SidebarTrigger />
@@ -53,9 +54,10 @@ export default function RootLayout({
                 </div>
                 <ThemeToggle />
               </header>
-              <div className="h-[calc(100vh-7rem)]">
+              <div className="flex-grow">
                 {children}
               </div>
+              <Footer />
             </SidebarInset>
           </SidebarProvider>
         </ThemeProvider>

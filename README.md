@@ -7,6 +7,8 @@
 
 A modern collection of essential developer tools built with Next.js, React, and TypeScript. This toolkit provides a suite of productivity tools for developers, designers, and content creators - all in a sleek, accessible web interface.
 
+🔗 **GitHub Repository**: [https://github.com/seif2003/Next.js_toolkit.git](https://github.com/seif2003/Next.js_toolkit.git)
+
 ## 🧰 Features
 
 The toolkit includes a variety of tools to help with different aspects of development:
@@ -127,6 +129,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## 👨‍💻 Author
+
+Created and maintained by [Seif Ben Amara](https://www.benamara.tn) - Visit my portfolio to see more of my work.
+
 ## 🙏 Acknowledgements
 
 - [Next.js](https://nextjs.org/)
@@ -137,4 +143,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-Made with ❤️ using Next.js and React
+Made with ❤️ using Next.js and React | © 2025 [Seif Ben Amara](https://www.benamara.tn)
