@@ -32,6 +32,7 @@ const CITIES = [
   { name: "Berlin", timezone: "Europe/Berlin" },
   { name: "Cairo", timezone: "Africa/Cairo" },
   { name: "Toronto", timezone: "America/Toronto" },
+  { name: "Tunisia", timezone: "Africa/Tunis" },
   { name: "Mexico City", timezone: "America/Mexico_City" },
   { name: "Amsterdam", timezone: "Europe/Amsterdam" },
   { name: "Stockholm", timezone: "Europe/Stockholm" },

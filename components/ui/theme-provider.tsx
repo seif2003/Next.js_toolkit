@@ -8,6 +8,8 @@ type Theme = "dark" | "light" | "system"
 
 type ThemeProviderProps = {
   children: React.ReactNode
+  defaultTheme?: Theme
+  storageKey?: string
 }
 
 type ThemeProviderState = {
@@ -17,21 +19,44 @@ type ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined)
 
-export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== "undefined") {
-      const storedTheme = localStorage.getItem("theme") as Theme
-      if (storedTheme) {
-        return storedTheme
-      }
-      
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
-      return prefersDark ? "dark" : "light"
+// Script to prevent flash of wrong theme
+const themeScript = `
+  let isDarkMode = false;
+  try {
+    const theme = localStorage.getItem("theme");
+    if (theme === "dark") {
+      isDarkMode = true;
+    } else if (theme === "system") {
+      isDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
-    return "light"
-  })
+  } catch (err) {}
+  document.documentElement.classList.toggle("dark", isDarkMode);
+`;
+
+export function ThemeProvider({
+  children,
+  defaultTheme = "system",
+  storageKey = "theme",
+  ...props
+}: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>(defaultTheme)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // Only set the actual theme on the client side once mounted
+    const storedTheme = localStorage.getItem(storageKey) as Theme
+    if (storedTheme) {
+      setTheme(storedTheme)
+    } else if (defaultTheme === "system") {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+      setTheme(prefersDark ? "dark" : "light")
+    }
+    setMounted(true)
+  }, [defaultTheme, storageKey])
+
+  useEffect(() => {
+    if (!mounted) return
+
     const root = window.document.documentElement
     
     root.classList.remove("light", "dark")
@@ -43,7 +68,25 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       root.classList.add(theme)
     }
     
-    localStorage.setItem("theme", theme)
+    localStorage.setItem(storageKey, theme)
+  }, [theme, mounted, storageKey])
+
+  // Handle system preference changes
+  useEffect(() => {
+    if (theme !== "system") return
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    
+    const handleChange = () => {
+      const root = window.document.documentElement
+      const isDark = mediaQuery.matches
+      
+      root.classList.remove("light", "dark")
+      root.classList.add(isDark ? "dark" : "light")
+    }
+    
+    mediaQuery.addEventListener("change", handleChange)
+    return () => mediaQuery.removeEventListener("change", handleChange)
   }, [theme])
 
   const value = {
@@ -53,8 +96,19 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     },
   }
 
+  // Insert script into document head to prevent flash of wrong theme
+  useEffect(() => {
+    // Insert the script once when the component mounts
+    if (!document.getElementById("theme-script")) {
+      const script = document.createElement("script")
+      script.id = "theme-script"
+      script.textContent = themeScript
+      document.head.appendChild(script)
+    }
+  }, [])
+  
   return (
-    <ThemeProviderContext.Provider value={value}>
+    <ThemeProviderContext.Provider value={value} {...props}>
       {children}
     </ThemeProviderContext.Provider>
   )

@@ -29,6 +29,8 @@ interface Task {
   id: string
   content: string
   completed: boolean
+  isMeeting?: boolean
+  meetingTime?: string
 }
 
 interface DayData {
@@ -46,9 +48,11 @@ interface WeekData {
 interface TaskDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (task: string) => void
+  onSave: (task: string, isMeeting?: boolean, meetingTime?: string) => void
   task?: string
   dialogTitle?: string
+  isMeeting?: boolean
+  meetingTime?: string
 }
 
 interface StickerSelectorProps {
@@ -93,17 +97,23 @@ const generateId = (): string => {
 }
 
 // Task Dialog Component
-const TaskDialog = ({ isOpen, onClose, onSave, task = "", dialogTitle = "Add New Task" }: TaskDialogProps) => {
+const TaskDialog = ({ isOpen, onClose, onSave, task = "", dialogTitle = "Add New Task", isMeeting = false, meetingTime = "" }: TaskDialogProps) => {
   const [taskInput, setTaskInput] = useState(task)
+  const [isMeetingInput, setIsMeetingInput] = useState(isMeeting)
+  const [meetingTimeInput, setMeetingTimeInput] = useState(meetingTime)
 
   useEffect(() => {
     setTaskInput(task)
-  }, [task])
+    setIsMeetingInput(isMeeting)
+    setMeetingTimeInput(meetingTime)
+  }, [task, isMeeting, meetingTime])
 
   const handleSave = () => {
     if (taskInput.trim()) {
-      onSave(taskInput)
+      onSave(taskInput, isMeetingInput, meetingTimeInput)
       setTaskInput("")
+      setIsMeetingInput(false)
+      setMeetingTimeInput("")
       onClose()
     }
   }
@@ -114,13 +124,29 @@ const TaskDialog = ({ isOpen, onClose, onSave, task = "", dialogTitle = "Add New
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
-        <div className="py-4">
+        <div className="py-4 space-y-4">
           <Input
             value={taskInput}
             onChange={(e) => setTaskInput(e.target.value)}
             placeholder="Enter your task..."
             className="w-full"
           />
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isMeetingInput}
+              onChange={(e) => setIsMeetingInput(e.target.checked)}
+            />
+            <span>Is this a meeting?</span>
+          </div>
+          {isMeetingInput && (
+            <Input
+              value={meetingTimeInput}
+              onChange={(e) => setMeetingTimeInput(e.target.value)}
+              placeholder="Enter meeting time..."
+              className="w-full"
+            />
+          )}
         </div>
         <DialogFooter>
           <Button
@@ -302,7 +328,7 @@ export default function RetroCalendarPage() {
   }
 
   // Add or update task
-  const handleSaveTask = (taskContent: string) => {
+  const handleSaveTask = (taskContent: string, isMeeting?: boolean, meetingTime?: string) => {
     if (!currentDay) return
 
     const updatedWeek = { ...currentWeek }
@@ -316,7 +342,7 @@ export default function RetroCalendarPage() {
     if (editingTask) {
       // Update existing task
       updatedWeek.days[currentDay].tasks = updatedWeek.days[currentDay].tasks.map((task) =>
-        task.id === editingTask.id ? { ...task, content: taskContent } : task
+        task.id === editingTask.id ? { ...task, content: taskContent, isMeeting, meetingTime } : task
       )
     } else {
       // Add new task
@@ -324,6 +350,8 @@ export default function RetroCalendarPage() {
         id: generateId(),
         content: taskContent,
         completed: false,
+        isMeeting,
+        meetingTime,
       })
     }
 
@@ -518,6 +546,11 @@ export default function RetroCalendarPage() {
                                           className="w-3 h-3"
                                         />
                                         <span className="truncate text-sm">{task.content}</span>
+                                        {task.isMeeting && (
+                                          <span className="text-xs text-muted-foreground ml-2">
+                                            {task.meetingTime}
+                                          </span>
+                                        )}
                                       </div>
                                       <div className="flex gap-1">
                                         <Button
@@ -585,6 +618,8 @@ export default function RetroCalendarPage() {
         onSave={handleSaveTask}
         task={editingTask ? editingTask.content : ""}
         dialogTitle={editingTask ? "Edit Task" : "Add New Task"}
+        isMeeting={editingTask ? editingTask.isMeeting : false}
+        meetingTime={editingTask ? editingTask.meetingTime : ""}
       />
     </div>
   )
