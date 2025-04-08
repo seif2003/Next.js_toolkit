@@ -143,4 +143,4 @@ Created and maintained by [Seif Ben Amara](https://www.benamara.tn) - Visit my p
 
 ---
 
-Made with ❤️ using Next.js and React | © 2025 [Seif Ben Amara](https://www.benamara.tn)
+Made with ❤️ using Next.js and React | © 2025 [Seif Ddine Ben Amara](https://www.benamara.tn)
