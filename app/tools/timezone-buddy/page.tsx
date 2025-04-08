@@ -14,6 +14,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { toast } from "sonner" // If toast is not available, we'll handle that later
+
+// Shared localStorage key for meetings between components
+const SHARED_MEETING_STORAGE_KEY = "timezone_buddy_meetings"
 
 // List of common cities with their timezones
 const CITIES = [
@@ -49,6 +53,19 @@ interface City {
 interface MeetingTime {
   date: string
   time: string
+}
+
+// New interface for shared meeting data
+interface SharedMeeting {
+  id: string
+  title: string
+  date: string
+  time: string
+  cities: {
+    name: string;
+    timezone: string;
+    localTime: string;
+  }[]
 }
 
 export default function TimeZoneBuddy() {
@@ -174,6 +191,30 @@ export default function TimeZoneBuddy() {
     } catch (error) {
       console.error(`Error getting meeting time for ${timezone}:`, error)
       return "Invalid timezone"
+    }
+  }
+
+  // Save meeting to localStorage
+  const saveMeetingToLocalStorage = () => {
+    try {
+      const meeting: SharedMeeting = {
+        id: Math.random().toString(36).substring(2, 9),
+        title: "Meeting",
+        date: meetingTime.date,
+        time: meetingTime.time,
+        cities: selectedCities.map(city => ({
+          name: city.name,
+          timezone: city.timezone,
+          localTime: getMeetingTimeInTimezone(city.timezone)
+        }))
+      }
+
+      const existingMeetings = JSON.parse(localStorage.getItem(SHARED_MEETING_STORAGE_KEY) || "[]")
+      localStorage.setItem(SHARED_MEETING_STORAGE_KEY, JSON.stringify([...existingMeetings, meeting]))
+      toast.success("Meeting saved successfully!")
+    } catch (error) {
+      console.error("Error saving meeting to localStorage:", error)
+      toast.error("Failed to save meeting.")
     }
   }
   
@@ -470,8 +511,7 @@ export default function TimeZoneBuddy() {
                 <Button 
                   className="w-full"
                   onClick={() => {
-                    // Here you would typically integrate with calendar apps
-                    // For now, just close the dialog
+                    saveMeetingToLocalStorage()
                     setShowMeetingPlanner(false)
                   }}
                 >

@@ -21,7 +21,9 @@ import {
   CaseSensitive,
   Binary,
   Search,
-  Book
+  Book,
+  Timer,
+  Coffee
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -29,6 +31,18 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const tools = [
+    {
+      title: "Pomodoro Timer",
+      description: "Boost productivity with timed work sessions and strategic breaks",
+      icon: Coffee,
+      url: "/tools/pomodoro",
+    },
+    {
+      title: "Chronometer",
+      description: "Precise timing with lap recording for various activities",
+      icon: Timer,
+      url: "/tools/chronometer",
+    },
     {
       title: "Color Picker",
       description: "Create, explore, and export beautiful color palettes",

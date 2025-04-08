@@ -24,6 +24,22 @@ const STICKERS = [
   { id: "poop", emoji: "💩", label: "Poop" },
 ]
 
+// Import shared meeting storage key from Timezone Buddy
+const SHARED_MEETING_STORAGE_KEY = "timezone_buddy_meetings"
+
+// Interface for Timezone Buddy shared meetings
+interface TimezoneBuddyMeeting {
+  id: string
+  title: string
+  date: string
+  time: string
+  cities: {
+    name: string
+    timezone: string
+    localTime: string
+  }[]
+}
+
 // Interface definitions
 interface Task {
   id: string
@@ -31,6 +47,7 @@ interface Task {
   completed: boolean
   isMeeting?: boolean
   meetingTime?: string
+  meetingDetails?: string  // For storing detailed meeting information
 }
 
 interface DayData {
@@ -58,6 +75,15 @@ interface TaskDialogProps {
 interface StickerSelectorProps {
   selectedSticker?: string
   onSelectSticker: (stickerId: string) => void
+}
+
+// Add Meeting Import Dialog interface
+interface MeetingImportDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  onImport: (meeting: TimezoneBuddyMeeting, dateKey: string) => void
+  availableMeetings: TimezoneBuddyMeeting[]
+  currentWeekDates: Date[]
 }
 
 // Get the Monday of the current week
@@ -188,6 +214,83 @@ const StickerSelector = ({ selectedSticker, onSelectSticker }: StickerSelectorPr
   )
 }
 
+// Meeting Import Dialog Component
+const MeetingImportDialog = ({ isOpen, onClose, onImport, availableMeetings, currentWeekDates }: MeetingImportDialogProps) => {
+  const [selectedMeeting, setSelectedMeeting] = useState<TimezoneBuddyMeeting | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string>("")
+
+  const handleImport = () => {
+    if (selectedMeeting && selectedDate) {
+      onImport(selectedMeeting, selectedDate)
+      onClose()
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Import Meetings from Timezone Buddy</DialogTitle>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          {availableMeetings.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              No meetings available from Timezone Buddy
+            </p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select a Meeting</label>
+                <div className="max-h-[200px] overflow-y-auto space-y-2 border rounded-md p-2">
+                  {availableMeetings.map((meeting) => (
+                    <div
+                      key={meeting.id}
+                      className={`p-3 border rounded-md cursor-pointer ${
+                        selectedMeeting?.id === meeting.id ? "bg-primary/10 border-primary" : "hover:bg-muted"
+                      }`}
+                      onClick={() => setSelectedMeeting(meeting)}
+                    >
+                      <div className="font-medium">Meeting on {new Date(meeting.date).toLocaleDateString()}</div>
+                      <div className="text-sm text-muted-foreground">Time: {meeting.time}</div>
+                      <div className="text-sm">
+                        {meeting.cities.map((city) => city.name).join(", ")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Add to Calendar Date</label>
+                <select 
+                  className="w-full border rounded-md p-2"
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  value={selectedDate}
+                >
+                  <option value="">Select a date</option>
+                  {currentWeekDates.map((date) => (
+                    <option key={formatDate(date)} value={formatDate(date)}>
+                      {getReadableDateFormat(formatDate(date))}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleImport} disabled={!selectedMeeting || !selectedDate}>
+            Import Meeting
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function RetroCalendarPage() {
   const [currentWeek, setCurrentWeek] = useState<WeekData>({
     startDate: formatDate(getMonday(new Date())),
@@ -196,6 +299,8 @@ export default function RetroCalendarPage() {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false)
   const [currentDay, setCurrentDay] = useState<string>("")
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [meetingImportDialogOpen, setMeetingImportDialogOpen] = useState(false)
+  const [timezoneBuddyMeetings, setTimezoneBuddyMeetings] = useState<TimezoneBuddyMeeting[]>([])
 
   // Load saved data from localStorage
   useEffect(() => {
@@ -211,12 +316,35 @@ export default function RetroCalendarPage() {
       // Initialize the week data if none exists
       initializeWeekData()
     }
+
+    // Load meetings from Timezone Buddy
+    loadTimezoneBuddyMeetings()
   }, [])
 
-  // Save data to localStorage whenever it changes
+  // Load meetings from Timezone Buddy
+  const loadTimezoneBuddyMeetings = () => {
+    try {
+      const meetingsData = localStorage.getItem(SHARED_MEETING_STORAGE_KEY)
+      if (meetingsData) {
+        const meetings = JSON.parse(meetingsData)
+        setTimezoneBuddyMeetings(meetings)
+      }
+    } catch (error) {
+      console.error("Failed to load Timezone Buddy meetings:", error)
+    }
+  }
+
+  // Check for new meetings from Timezone Buddy periodically
   useEffect(() => {
-    localStorage.setItem("retro_calendar_data", JSON.stringify(currentWeek))
-  }, [currentWeek])
+    const checkForNewMeetings = () => {
+      loadTimezoneBuddyMeetings()
+    }
+
+    // Check for new meetings every 30 seconds
+    const intervalId = setInterval(checkForNewMeetings, 30000)
+    
+    return () => clearInterval(intervalId)
+  }, [])
 
   // Initialize week data with empty tasks for each day
   const initializeWeekData = () => {
@@ -327,6 +455,11 @@ export default function RetroCalendarPage() {
     setTaskDialogOpen(true)
   }
 
+  // Open meeting import dialog
+  const openMeetingImportDialog = () => {
+    setMeetingImportDialogOpen(true)
+  }
+
   // Add or update task
   const handleSaveTask = (taskContent: string, isMeeting?: boolean, meetingTime?: string) => {
     if (!currentDay) return
@@ -355,6 +488,46 @@ export default function RetroCalendarPage() {
       })
     }
 
+    setCurrentWeek(updatedWeek)
+  }
+
+  // Import meeting from Timezone Buddy
+  const importMeeting = (meeting: TimezoneBuddyMeeting, dateKey: string) => {
+    const updatedWeek = { ...currentWeek }
+    
+    if (!updatedWeek.days[dateKey]) {
+      updatedWeek.days[dateKey] = {
+        date: dateKey,
+        tasks: [],
+      }
+    }
+    
+    // Format meeting details for task
+    const mainCity = meeting.cities[0]
+    const otherCities = meeting.cities.slice(1)
+    
+    let meetingContent = `Meeting: ${meeting.title || 'Timezone Buddy Meeting'}`
+    const meetingTime = meeting.time
+    
+    // Create detailed meeting information for the task
+    let meetingDetails = `Meeting time: ${mainCity.name} ${meeting.time}\n`
+    if (otherCities.length > 0) {
+      meetingDetails += "Other locations:\n"
+      otherCities.forEach(city => {
+        meetingDetails += `- ${city.name}: ${city.localTime.split(', ')[2] || city.localTime}\n`
+      })
+    }
+    
+    // Add the meeting as a task
+    updatedWeek.days[dateKey].tasks.push({
+      id: generateId(),
+      content: meetingContent,
+      completed: false,
+      isMeeting: true,
+      meetingTime: meetingTime,
+      meetingDetails: meetingDetails.trim()
+    })
+    
     setCurrentWeek(updatedWeek)
   }
 
@@ -434,6 +607,11 @@ export default function RetroCalendarPage() {
     setCurrentWeek(updatedWeek)
   }
 
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("retro_calendar_data", JSON.stringify(currentWeek))
+  }, [currentWeek])
+
   // Get the dates for the current week
   const weekDates = getWeekDates(new Date(currentWeek.startDate))
   const today = formatDate(new Date())
@@ -464,6 +642,13 @@ export default function RetroCalendarPage() {
           >
             Next Week ►
           </Button>
+          <Button 
+            onClick={openMeetingImportDialog}
+            variant="secondary"
+            size="sm"
+          >
+            Import Meetings
+          </Button>
         </div>
       </div>
 
@@ -475,27 +660,41 @@ export default function RetroCalendarPage() {
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-6 p-6">
             {weekDates.map((date) => {
               const dateKey = formatDate(date)
               const dayData = currentWeek.days[dateKey] || { date: dateKey, tasks: [] }
               const isToday = dateKey === today
               const sticker = dayData.sticker ? STICKERS.find(s => s.id === dayData.sticker) : null
+              const meetingCount = dayData.tasks.filter(t => t.isMeeting).length
 
               return (
                 <div 
                   key={dateKey} 
-                  className={`border rounded-lg ${isToday ? 'border-primary ring-1 ring-primary' : 'border-border'}`}
+                  className={`border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 ${
+                    isToday ? 'border-primary ring-1 ring-primary' : 'border-border'
+                  }`}
                 >
-                  <div className={`text-center py-2 mb-1 ${isToday ? 'bg-primary/10 text-primary' : 'bg-muted/50 text-foreground'} rounded-t-md`}>
-                    {getReadableDateFormat(dateKey)}
+                  <div 
+                    className={`text-center py-3 px-2 ${
+                      isToday ? 'bg-primary/10 text-primary font-semibold' : 'bg-muted/50 text-foreground'
+                    } rounded-t-md flex flex-col items-center`}
+                  >
+                    <div className="text-base font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                    <div className="text-2xl font-bold">{date.getDate()}</div>
+                    <div className="text-xs opacity-80">{date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>
                     {sticker && (
-                      <div className="text-2xl mt-1">{sticker.emoji}</div>
+                      <div className="text-3xl mt-1">{sticker.emoji}</div>
+                    )}
+                    {meetingCount > 0 && (
+                      <div className="mt-1 bg-primary/20 text-primary text-xs px-2 py-0.5 rounded-full">
+                        {meetingCount} {meetingCount === 1 ? 'Meeting' : 'Meetings'}
+                      </div>
                     )}
                   </div>
 
-                  <Tabs defaultValue="tasks" className="w-full px-2 pb-2">
-                    <TabsList className="w-full grid grid-cols-3 mb-2 h-8">
+                  <Tabs defaultValue="tasks" className="w-full px-3 py-3">
+                    <TabsList className="w-full grid grid-cols-3 mb-3">
                       <TabsTrigger 
                         value="tasks" 
                         className="text-xs"
@@ -522,11 +721,15 @@ export default function RetroCalendarPage() {
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className="space-y-2 min-h-[150px]"
+                            className="space-y-3 min-h-[220px] max-h-[300px] overflow-y-auto pr-1 styled-scrollbar"
                           >
                             {dayData.tasks.length === 0 ? (
-                              <div className="text-center text-muted-foreground py-4 text-sm">
-                                No tasks yet
+                              <div className="text-center text-muted-foreground py-8 text-sm flex flex-col items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 opacity-20 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                <span>No tasks yet</span>
+                                <span className="text-xs mt-1 opacity-60">Click Add Task to begin</span>
                               </div>
                             ) : (
                               dayData.tasks.map((task, index) => (
@@ -536,38 +739,58 @@ export default function RetroCalendarPage() {
                                       ref={provided.innerRef}
                                       {...provided.draggableProps}
                                       {...provided.dragHandleProps}
-                                      className={`p-2 rounded-md bg-card border text-sm flex justify-between items-center ${task.completed ? 'line-through opacity-70' : ''}`}
+                                      className={`p-3 rounded-md bg-card border shadow-sm hover:border-primary/30 transition-colors
+                                        ${task.completed ? 'bg-muted/30' : task.isMeeting ? 'bg-blue-50 dark:bg-blue-950/30' : ''}
+                                        ${task.completed ? 'line-through opacity-70' : ''}`}
                                     >
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2 mb-1">
                                         <input
                                           type="checkbox"
                                           checked={task.completed}
                                           onChange={() => toggleTaskCompletion(dateKey, task.id)}
-                                          className="w-3 h-3"
+                                          className="w-4 h-4 rounded-sm"
                                         />
-                                        <span className="truncate text-sm">{task.content}</span>
-                                        {task.isMeeting && (
-                                          <span className="text-xs text-muted-foreground ml-2">
-                                            {task.meetingTime}
-                                          </span>
-                                        )}
+                                        <span className={`truncate text-sm font-medium ${task.isMeeting ? 'text-blue-700 dark:text-blue-300' : ''}`}>
+                                          {task.content}
+                                        </span>
                                       </div>
-                                      <div className="flex gap-1">
+                                      
+                                      {task.isMeeting && task.meetingTime && (
+                                        <div className="ml-6 text-xs space-y-1 mt-1">
+                                          <div className="flex items-center text-muted-foreground">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            {task.meetingTime}
+                                          </div>
+                                          {task.meetingDetails && (
+                                            <div className="text-xs text-muted-foreground whitespace-pre-line ml-4">
+                                              {task.meetingDetails}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      <div className="flex gap-1 justify-end mt-2">
                                         <Button
                                           onClick={() => openEditTaskDialog(dateKey, task)}
                                           variant="ghost"
                                           size="sm"
-                                          className="h-6 w-6 p-0"
+                                          className="h-6 w-6 p-0 rounded-full hover:bg-muted"
                                         >
-                                          ✎
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                          </svg>
                                         </Button>
                                         <Button
                                           onClick={() => deleteTask(dateKey, task.id)}
                                           variant="ghost"
                                           size="sm"
-                                          className="h-6 w-6 p-0 text-destructive"
+                                          className="h-6 w-6 p-0 rounded-full hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
                                         >
-                                          ×
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
                                         </Button>
                                       </div>
                                     </div>
@@ -583,8 +806,11 @@ export default function RetroCalendarPage() {
                         onClick={() => openAddTaskDialog(dateKey)}
                         variant="secondary"
                         size="sm"
-                        className="w-full mt-2 text-xs"
+                        className="w-full mt-3 text-xs flex items-center justify-center gap-1"
                       >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
                         Add Task
                       </Button>
                     </TabsContent>
@@ -600,7 +826,7 @@ export default function RetroCalendarPage() {
                       <textarea
                         value={dayData.notes || ""}
                         onChange={(e) => saveDayNotes(dateKey, e.target.value)}
-                        className="w-full h-24 p-2 text-xs border rounded-md resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="w-full h-[220px] p-3 text-sm border rounded-md resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                         placeholder="Add your notes for the day..."
                       />
                     </TabsContent>
@@ -620,6 +846,14 @@ export default function RetroCalendarPage() {
         dialogTitle={editingTask ? "Edit Task" : "Add New Task"}
         isMeeting={editingTask ? editingTask.isMeeting : false}
         meetingTime={editingTask ? editingTask.meetingTime : ""}
+      />
+
+      <MeetingImportDialog
+        isOpen={meetingImportDialogOpen}
+        onClose={() => setMeetingImportDialogOpen(false)}
+        onImport={importMeeting}
+        availableMeetings={timezoneBuddyMeetings}
+        currentWeekDates={weekDates}
       />
     </div>
   )
